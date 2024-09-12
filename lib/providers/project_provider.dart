@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:dartssh2/dartssh2.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,7 +12,6 @@ class ProjectProvider extends ChangeNotifier {
   List<String> _remoteProjects = [];
   String _log = '';
   bool enableLogging = true; // Enable logging by default
-  SSHClient? _client;
 
   String host = '';
   String username = '';
@@ -20,6 +21,7 @@ class ProjectProvider extends ChangeNotifier {
   int port = 22;
 
   final String _configFileName = 'echogit_config.json';
+  static const platform = MethodChannel('com.example.echogit_mobile/termux');
 
   List<String> get localProjects => _localProjects;
   List<String> get remoteProjects => _remoteProjects;
@@ -78,50 +80,6 @@ class ProjectProvider extends ChangeNotifier {
     }
   }
 
-  void connect(String host, String username, String password, String remotePath, String localPath, int port) async {
-    this.remotePath = remotePath;
-    this.localPath = localPath;
-    this.host = host;
-    this.username = username;
-    this.password = password; /* FIXME */
-    this.port = port;
-    await _saveConfiguration();
-
-    try {
-      _client = SSHClient(
-        await SSHSocket.connect(host, port),
-        username: username,
-        onPasswordRequest: () => password,
-      );
-
-      _logMessage('Connected to $host');
-      discoverProjects();
-    } catch (e) {
-      _logMessage('Error connecting: $e');
-    }
-
-    notifyListeners();
-  }
-
-  void discoverProjects() async {
-    try {
-      // Discover remote projects with .echogit folders
-      final result = await _client!.run("find $remotePath -type d -name .echogit -exec dirname {} \\;");
-      var result2 = utf8.decode(result);
-      _remoteProjects = result2.split('\n').where((line) => line.trim().isNotEmpty).toList();
-
-      // Check for local projects
-      _localProjects = await _listLocalProjects();
-
-      _logMessage('Discovered projects:\nLocal: ${_localProjects.join(', ')}\nRemote: ${_remoteProjects.join(', ')}');
-      await _saveConfiguration();
-    } catch (e) {
-      _logMessage('Error discovering projects: $e');
-    }
-
-    notifyListeners();
-  }
-
   Future<List<String>> _listLocalProjects() async {
     try {
       final dir = Directory(localPath);
@@ -134,21 +92,128 @@ class ProjectProvider extends ChangeNotifier {
     return [];
   }
 
-  void cloneProject(String remoteProject) async {
-    try {
-      // Clone the project from the remote to the local path
-      print("git clone");
-      await _client!.run('git clone $remoteProject $localPath/${remoteProject.split('/').last}');
+  Future<String> executeCommand(String command, String workingDirectory) async {
+    if (Platform.isAndroid) {
+      _logMessage("Attempting to execute command on Android using Termux...");
 
-      _localProjects.add(remoteProject.split('/').last);
+      try {
+        // Call the platform channel to execute the command
+        final result = await platform.invokeMethod(
+          'executeTermuxCommand',
+          {
+            'command': command,
+            'workingDirectory': workingDirectory,
+          },
+        );
+        _logMessage('Command executed successfully on Android: $result');
+
+        if (result != null) {
+          final stdout = result['stdout'] ?? 'No stdout';
+          final stderr = result['stderr'] ?? 'No stderr';
+          final exitCode = result['exitCode'] ?? 'Unknown exit code';
+
+          _logMessage('Command executed successfully on Android:\n'
+                      'stdout: $stdout\nstderr: $stderr\nexitCode: $exitCode');
+
+          return 'stdout: $stdout\nstderr: $stderr\nexitCode: $exitCode';
+        } else {
+          _logMessage('No output from Termux command.');
+          return 'No output';
+        }
+      } catch (e) {
+        _logMessage('Error executing command on Android: $e');
+        return 'Error executing command on Android: $e';
+      }
+    } else if (Platform.isLinux) {
+      _logMessage("Attempting to execute command on Linux...");
+      try {
+        final result = await Process.run(
+          'bash', ['-c', command],
+          workingDirectory: workingDirectory,
+        );
+        if (result.exitCode == 0) {
+          _logMessage('Command executed successfully on Linux: ${result.stdout}');
+          return result.stdout;
+        } else {
+          _logMessage('Error executing command on Linux: ${result.stderr}');
+          return result.stderr;
+        }
+      } catch (e) {
+        _logMessage('Error executing command on Linux: $e');
+        return 'Error executing command on Linux: $e';
+      }
+    } else {
+      _logMessage('Unsupported platform.');
+      return 'Unsupported platform.';
+    }
+  }
+
+  /// Updated discoverProjects to use executeCommand and remote SSH
+  void discoverProjects() async {
+    username='abdel';
+    host='192.168.1.5';
+    port = 22;
+    remotePath="/tmp/test/";
+
+    _logMessage("will discover");
+    try {
+      final command1 = '/data/data/com.termux/files/home/.termux/tasker/tutu.sh';
+      String result1 = await executeCommand(command1, '/data/data/com.termux/files/home/.termux/');
+      _logMessage(result1);
+/*
+      // Execute remote SSH command to discover projects
+      final command = 'ssh $username@$host -p $port "find $remotePath -type d -name .echogit -exec dirname {} \\;"';
+      String result = await executeCommand(command, localPath);
+
+      _remoteProjects = result.split('\n').where((line) => line.trim().isNotEmpty).toList();
+
+      // Check for local projects
+      _localProjects = await _listLocalProjects();
+
+      _logMessage('Discovered projects:\nLocal: ${_localProjects.join(', ')}\nRemote: ${_remoteProjects.join(', ')}');
+      await _saveConfiguration();
+      */
+    } catch (e) {
+      _logMessage('Error discovering projects: $e');
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> cloneProject(String remoteProject) async {
+    username='abdel';
+    host='192.168.1.5';
+    port = 22;
+    remotePath="/tmp/test/";
+    _logMessage("in cloneProject");
+    try {
+      // Extract the project name from the remote path
+      final projectName = remoteProject.split('/').last;
+      // Construct the full local path for the new project directory
+      final projectDirectory = Directory(path.join(localPath, projectName));
+
+      // Ensure the local directory exists (create if it does not exist)
+      //await projectDirectory.create(recursive: true);
+
+      _logMessage("cloning...");  // Log the result or handle further
+
+      // Construct the Git clone command
+      final command = 'git clone ssh://$username@$host:$port/$remoteProject';
+
+      // Execute the Git command with the local path as the working directory
+      String result = await executeCommand(command, localPath);
+
+      _logMessage(result);  // Log the result or handle further
+
+      // Update the project lists
+      _localProjects.add(projectName);
       _remoteProjects.remove(remoteProject);
 
-      _logMessage('Cloned project: $remoteProject to $localPath');
+      _logMessage('Cloned project: $remoteProject to $projectDirectory');
       await _saveConfiguration();
     } catch (e) {
       _logMessage('Error cloning project $remoteProject: $e');
     }
-
     notifyListeners();
   }
 

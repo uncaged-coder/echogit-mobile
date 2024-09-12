@@ -78,17 +78,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    provider.connect(
-                      _hostController.text,
-                      _usernameController.text,
-                      _passwordController.text,
-                      _remotePathController.text,
-                      _localPathController.text,
-                      int.tryParse(_portController.text) ?? 22,
-                    );
-                    Navigator.pop(context);
-                  }
+                  provider.discoverProjects();
+                  Navigator.pop(context);
                 },
                 child: Text('Save'),
               ),

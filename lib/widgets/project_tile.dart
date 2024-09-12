@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:echogit_mobile/providers/project_provider.dart';
 
 class ProjectTile extends StatelessWidget {
   final Map<String, dynamic> project;
@@ -35,7 +37,8 @@ class ProjectTile extends StatelessWidget {
             : IconButton(
                 icon: Icon(Icons.download, color: Colors.green[700]),
                 onPressed: () {
-                  // Logic to clone remote project
+                  final provider = Provider.of<ProjectProvider>(context, listen: false);
+                  provider.cloneProject(project['name']);
                 },
               ),
         onTap: () {
