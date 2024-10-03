@@ -30,8 +30,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.0.5 # For state management
-  ssh2: ^2.2.3
+  provider: # For state management
+  process_run:
+  dartssh2: ^2.2.3
+  git: ^2.3.0
+  path_provider:
+  file_picker:
+  path:
+  android_intent_plus:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -46,7 +52,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
