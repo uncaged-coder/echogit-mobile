@@ -35,6 +35,7 @@ class ProjectProvider extends ChangeNotifier {
   bool enableLogging = true;
   bool? _ignorePeersDown;
   String? _projectsPath;
+  bool? _autoCommit;
 
   static const platform = MethodChannel("com.uncaged.echogit_mobile/termux");
 
@@ -79,6 +80,7 @@ class ProjectProvider extends ChangeNotifier {
     // to help on development and testing purpose.
     final echogitPath = "/zdata/data/desk/echogit/";
     final String command = "python3 $echogitPath/echogit.py $echogitCommand";
+	print("run command $command");
 
     final result = await Process.run(
       "bash", ["-c", command],
@@ -133,10 +135,9 @@ class ProjectProvider extends ChangeNotifier {
 
       // Extract the values from the stdout string
       final dataPathRegEx = RegExp(r"Data Path: (.*)");
-      final ignorePeersDownRegEx = RegExp(r"Ignore peers down: (true|false)");
-      final echogitBinRegEx = RegExp(r"Echogit bin: (.*)");
+      final ignorePeersDownRegEx = RegExp(r"Ignore peers down: (True|False)");
       _projectsPath = dataPathRegEx.firstMatch(output)?.group(1)?.trim();
-      _ignorePeersDown = ignorePeersDownRegEx.firstMatch(output)?.group(1) == 'true';
+      _ignorePeersDown = ignorePeersDownRegEx.firstMatch(output)?.group(1) == 'True';
     }
 
     return {
@@ -155,6 +156,38 @@ class ProjectProvider extends ChangeNotifier {
 
       // TODO: Add logic to check success in 'result'
     }
+  }
+
+  Future<Map<String, dynamic>> getProjectConfig(String projectDir) async {
+
+	if (_projectsPath == null) {
+		await getEchogitConfig();
+	}
+    final path = "$_projectsPath/$projectDir";
+    final command = "config $path -g";
+
+    // Execute the command
+    final result = await executeCommand(command);
+
+    // Extract the stdout from the result
+    final String output = result["stdout"] ?? "No stdout";
+
+    // Extract the values from the stdout string
+    final autoCommitRegEx = RegExp(r"Auto commit: (True|False)");
+    _autoCommit = autoCommitRegEx.firstMatch(output)?.group(1) == 'True';
+
+    return {
+      'autoCommit': _autoCommit,
+    };
+  }
+
+  Future<void> setProjectConfig(String projectDir, bool autoCommit) async {
+	if (_projectsPath == null) {
+		await getEchogitConfig();
+	}
+    final path = "$_projectsPath/$projectDir";
+    final command = "config $path -s 'autoCommit:$autoCommit'";
+    final result = await executeCommand(command);
   }
 
   void loadProjects(bool useCache) async {

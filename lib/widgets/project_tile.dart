@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:echogit_mobile/providers/project_provider.dart';
+import 'package:echogit_mobile/screens/project_settings_screen.dart';
 
 class ProjectTile extends StatefulWidget {
   final Project project;
@@ -56,8 +57,10 @@ class _ProjectTileState extends State<ProjectTile> {
                   ),
                   IconButton(
                     icon: Icon(Icons.settings, color: Colors.blue[700]),
-                    onPressed: () {
-                    },
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ProjectSettingsScreen(projectPath)),
+                    ),
                   ),
                   IconButton(
                     icon: _isSyncing
