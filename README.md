@@ -1,16 +1,19 @@
 # echogit_mobile
 
-A new Flutter project.
+<img align="left" width="100" height="100" src="assets/icon.png">
 
-## Getting Started
+echogit is a python program that synchronize files using git.
+this is an alternative to syncthing but much better for me. (but maybe not for you ;).
 
-This project is a starting point for a Flutter application.
+to work, it requires:
+- termux installed.
+- permission set on android for echogit-mobile
+- installation of echogit on termux
+- setup of echogit.sh with execution permission
+- ssh keys setup so we can git clone through ssh without password
+- understand how files and folder has to be organized for echogit usage
+- be confortable with git, ssh and keys
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+this does the job for me, but this is not ready to be used by anyone.
+Not to mention that in case of git conflict, you have to resolve yourself the issue
+using git on termux.

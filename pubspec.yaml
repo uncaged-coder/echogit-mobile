@@ -1,5 +1,5 @@
 name: echogit_mobile
-description: "A new Flutter project."
+description: "Echogit for mobile."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -32,8 +32,6 @@ dependencies:
     sdk: flutter
   provider: # For state management
   process_run:
-  dartssh2: ^2.2.3
-  git: ^2.3.0
   path_provider:
   file_picker:
   path:
@@ -53,6 +51,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+
+  flutter_launcher_icons:
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
