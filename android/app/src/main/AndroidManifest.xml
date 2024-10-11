@@ -12,6 +12,10 @@
         android:label="echogit_mobile"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <receiver
+          android:name=".MyReceiver"
+          android:exported="true"
+        />
         <service android:name="com.termux.app.RunCommandService" />
         <service android:name=".PluginResultsService" />
         <activity

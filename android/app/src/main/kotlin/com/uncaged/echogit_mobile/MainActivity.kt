@@ -10,6 +10,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.uncaged.echogit_mobile/termux"
@@ -31,7 +32,14 @@ class MainActivity : FlutterActivity() {
         }
 
         // Registering a receiver to capture the results from the service
-        registerReceiver(resultReceiver, IntentFilter(RESULT_ACTION))
+        val receiverIntentFilter = IntentFilter(RESULT_ACTION)
+
+        // Set the exported flag based on Android version
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {  // Android 13+
+            registerReceiver(resultReceiver, receiverIntentFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(resultReceiver, receiverIntentFilter)
+        }
     }
 
     private val resultReceiver = object : BroadcastReceiver() {
