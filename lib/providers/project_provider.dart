@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:collection/collection.dart';
 import 'package:path/path.dart' as path;
 import 'dart:convert';
 import 'dart:io';
@@ -8,7 +9,7 @@ import 'dart:io';
 class Project {
   final String name;
   final String path;
-  final bool isLocal;
+  bool isLocal;
 
   Project(String name, String path, this.isLocal)
       : name = name,
@@ -192,12 +193,16 @@ class ProjectProvider extends ChangeNotifier {
 
   void loadProjects(bool useCache) async {
     _logMessage("Loading projects ...");
+
+    // Clear the existing lists before loading
     _ownedProjects.clear();
     _remoteProjects.clear();
+
     try {
       final command = useCache ? "list --remote -c" : "list --remote";
-
       final result = await executeCommand(command);
+
+      // Parse the command output for project details
       final projects = _parseProjectsOutput(result["stdout"]);
 
       if (projects != null) {
@@ -208,6 +213,7 @@ class ProjectProvider extends ChangeNotifier {
         _logMessage("Ours: $ours");
         _logMessage("Available: $available");
 
+        // Map the results to the Project class and update the lists
         _ownedProjects = ours.keys.map((path) => Project(ours[path]!, path, true)).toList();
         _remoteProjects = available.keys.map((path) => Project(available[path]!, path, false)).toList();
       } else {
@@ -217,6 +223,7 @@ class ProjectProvider extends ChangeNotifier {
       _logMessage("Error discovering projects: $e");
     }
 
+    // Notify listeners to update the UI
     notifyListeners();
   }
 
@@ -275,7 +282,23 @@ class ProjectProvider extends ChangeNotifier {
     _logMessage("execute command: $command");
     final result = await executeCommand(command);
     _logMessage("command result: $result");
-    notifyListeners();
+
+    // Find the project in the remote list
+    Project? projectToClone = _remoteProjects.firstWhereOrNull(
+      (project) => project.path == remoteProject,
+    );
+
+    if (projectToClone != null) {
+      // Update the project's state to local
+      projectToClone.isLocal = true;
+
+      // Move it from remote to local list
+      _remoteProjects.remove(projectToClone);
+      _ownedProjects.add(projectToClone);
+
+      // Notify listeners about the change
+      notifyListeners();
+    }
   }
 
   Future<void> sync([String projectDir = ""]) async {
@@ -284,9 +307,16 @@ class ProjectProvider extends ChangeNotifier {
       path = "$_projectsPath/$projectDir";
     }
 
-    _logMessage("execute command: sync");
+    _logMessage("execute command: sync $path");
     final result = await executeCommand("sync $path");
-    _logMessage("command result: $result");
+
+    if (result["exitCode"] != 0) {
+      _logMessage("Sync failed: ${result['stderr']}");
+    } else {
+      _logMessage("Sync successful: ${result['stdout']}");
+    }
+
+    // Notify listeners after sync operation
     notifyListeners();
   }
 
