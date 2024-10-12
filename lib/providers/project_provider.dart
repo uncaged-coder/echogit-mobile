@@ -37,11 +37,13 @@ class ProjectProvider extends ChangeNotifier {
   bool? _ignorePeersDown;
   String? _projectsPath;
   bool? _autoCommit;
+  bool _isRunningCommand = false;
 
   static const platform = MethodChannel("com.uncaged.echogit_mobile/termux");
 
-  List<Project> get ownedProjects => _ownedProjects;
-  List<Project> get remoteProjects => _remoteProjects;
+  // Return a copy of the list (snapshot) for safe use in the UI
+  List<Project> get ownedProjects => List.unmodifiable(_ownedProjects);
+  List<Project> get remoteProjects => List.unmodifiable(_remoteProjects);
   String get log => _log;
 
   ProjectProvider() {
@@ -94,7 +96,18 @@ class ProjectProvider extends ChangeNotifier {
     };
   }
 
-  Future<Map<String, dynamic>> executeCommand(String command) async {
+  Future<Map<String, dynamic>> _executeCommand(String command) async {
+
+    if (_isRunningCommand) {
+      _logMessage("Another command is already running, cannot start new command.");
+      return {
+        "stdout": "",
+        "stderr": "Error executing command: command busy",
+        "exitCode": -1
+      };
+    }
+    _isRunningCommand = true;
+
     try {
       Map<String, dynamic> result;
       if (Platform.isAndroid) {
@@ -102,6 +115,7 @@ class ProjectProvider extends ChangeNotifier {
       } else if (Platform.isLinux || Platform.isMacOS) {
         result = await _runOnLinux(command);
       } else {
+        _isRunningCommand = false;
         return {
           "stdout": "",
           "stderr": "Unsupported platform",
@@ -113,15 +127,18 @@ class ProjectProvider extends ChangeNotifier {
         "Command executed:\nstdout: ${result['stdout']}\nstderr: ${result['stderr']}\nexitCode: ${result['exitCode']}"
       );
 
+      _isRunningCommand = false;
       return result;
     } catch (e) {
       _logMessage("Error executing command: $e");
+      _isRunningCommand = false;
       return {
         "stdout": "",
         "stderr": "Error executing command: $e",
         "exitCode": -1
       };
     }
+
   }
 
   Future<Map<String, dynamic>> getEchogitConfig() async {
@@ -129,7 +146,7 @@ class ProjectProvider extends ChangeNotifier {
       final command = "config -g";
 
       // Execute the command
-      final result = await executeCommand(command);
+      final result = await _executeCommand(command);
 
       // Extract the stdout from the result
       final String output = result["stdout"] ?? "No stdout";
@@ -153,7 +170,7 @@ class ProjectProvider extends ChangeNotifier {
       _projectsPath = projectPath;
 
       final command = "config -s 'ignore_peers_down:$ignorePeersDown, projects_path=$projectPath'";
-      final result = await executeCommand(command);
+      final result = await _executeCommand(command);
 
       // TODO: Add logic to check success in 'result'
     }
@@ -169,7 +186,7 @@ class ProjectProvider extends ChangeNotifier {
     final command = "config $path -g";
 
     // Execute the command
-    final result = await executeCommand(command);
+    final result = await _executeCommand(command);
 
     // Extract the stdout from the result
     final String output = result["stdout"] ?? "No stdout";
@@ -184,12 +201,12 @@ class ProjectProvider extends ChangeNotifier {
   }
 
   Future<void> setProjectConfig(String projectDir, bool autoCommit) async {
-	if (_projectsPath == null) {
-		await getEchogitConfig();
-	}
+    if (_projectsPath == null) {
+      await getEchogitConfig();
+    }
     final path = "$_projectsPath/$projectDir";
     final command = "config $path -s 'autoCommit:$autoCommit'";
-    final result = await executeCommand(command);
+    final result = await _executeCommand(command);
   }
 
   void loadProjects(bool useCache) async {
@@ -201,7 +218,7 @@ class ProjectProvider extends ChangeNotifier {
 
     try {
       final command = useCache ? "list --remote -c" : "list --remote";
-      final result = await executeCommand(command);
+      final result = await _executeCommand(command);
 
       // Parse the command output for project details
       final projects = _parseProjectsOutput(result["stdout"]);
@@ -286,7 +303,7 @@ class ProjectProvider extends ChangeNotifier {
 
     final command = "clone $_projectsPath/$remoteProject";
     _logMessage("execute command: $command");
-    final result = await executeCommand(command);
+    final result = await _executeCommand(command);
     _logMessage("command result: $result");
 
     // Find the project in the remote list
@@ -317,7 +334,7 @@ class ProjectProvider extends ChangeNotifier {
     }
 
     _logMessage("execute command: sync $path");
-    final result = await executeCommand("sync $path");
+    final result = await _executeCommand("sync $path");
 
     if (result["exitCode"] != 0) {
       _logMessage("Sync failed: ${result['stderr']}");
