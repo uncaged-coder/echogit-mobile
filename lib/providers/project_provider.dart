@@ -161,9 +161,10 @@ class ProjectProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> getProjectConfig(String projectDir) async {
 
-	if (_projectsPath == null) {
-		await getEchogitConfig();
-	}
+    if (_projectsPath == null) {
+      await getEchogitConfig();
+    }
+
     final path = "$_projectsPath/$projectDir";
     final command = "config $path -g";
 
@@ -278,6 +279,11 @@ class ProjectProvider extends ChangeNotifier {
   }
 
   Future<void> cloneProject(String remoteProject) async {
+
+    if (_projectsPath == null) {
+      await getEchogitConfig();
+    }
+
     final command = "clone $_projectsPath/$remoteProject";
     _logMessage("execute command: $command");
     final result = await executeCommand(command);
@@ -303,6 +309,9 @@ class ProjectProvider extends ChangeNotifier {
 
   Future<void> sync([String projectDir = ""]) async {
     String path = "";
+    if (_projectsPath == null) {
+      await getEchogitConfig();
+    }
     if (projectDir.isNotEmpty) {
       path = "$_projectsPath/$projectDir";
     }
