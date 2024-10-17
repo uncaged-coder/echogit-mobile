@@ -21,6 +21,10 @@ class Project {
       return path.substring(0, path.length - 5);
     } else if (path.endsWith(".git")) {
       return path.substring(0, path.length - 4);
+    } else if (path.endsWith(".rsync")) {
+      return path.substring(0, path.length - 6);
+    } else if (path.endsWith(".rsync/")) {
+      return path.substring(0, path.length - 7);
     }
     return path;
   }
